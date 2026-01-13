@@ -26,60 +26,77 @@ export default {
       let emailSubject = "";
       let emailHtml = "";
       let emailTo = [];
-      // Zolang je domein in Resend nog niet 'Verified' is, gebruik 'onboarding@resend.dev'.
-      // Zodra het groen is: "Autoglas Pro <info@autoglaspro.nl>"
-      let emailFrom = "Autoglas Pro <onboarding@resend.dev>"; 
+      
+      // BELANGRIJK: Zolang je domein in Resend 'Pending' is, MOET je 'onboarding@resend.dev' gebruiken.
+      // Zodra het 'Verified' is, verander je dit naar: "Autoglas Pro <info@autoglaspro.nl>"
+      let emailFrom = "Autoglas Pro <info@autoglaspro.nl>"; 
 
       // --- SCENARIO A: JIJ STUURT EEN MAIL NAAR EEN KLANT (INTAKE) ---
       if (typeWerk === "Vrije_Email") {
         const klantEmail = formData.get("Email_To");
         const onderwerp = formData.get("Onderwerp");
-        const bericht = formData.get("Bericht");
+        const bericht = formData.get("Bericht"); // De tekst die jij typt (met enters)
         
         emailTo = [klantEmail]; 
         emailSubject = onderwerp;
 
-        // --- HET PREMIUM DESIGN ---
-        // Vervang de URL bij 'img src' met de link naar jouw logo (liefst PNG)
-        const logoUrl = "https://autoglaspro.nl/wp-content/uploads/2020/10/AutoglasPRO-logo-2.svg"; // Ik heb deze gok gedaan op basis van je site, check of hij werkt!
+        // LOGO URL: Ik gebruik hier de PNG versie die vaak beter werkt in email dan SVG
+        // Als deze niet werkt, upload je logo als PNG naar je media bieb en plak de link hier.
+        const logoUrl = "https://autoglaspro.nl/wp-content/uploads/2021/04/Autoglas-Pro-Logo-Web-Wit.png";
 
+        // --- HET PREMIUM DESIGN (Gebaseerd op jouw Layout.tsx) ---
         emailHtml = `
           <!DOCTYPE html>
           <html>
           <head>
             <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+              body { margin: 0; padding: 0; font-family: sans-serif; background-color: #f1f5f9; }
+              .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+              .header { background-color: #0f172a; padding: 30px; text-align: center; } /* slate-900 */
+              .accent-bar { height: 6px; background-color: #dc2626; width: 100%; } /* agp-red (approx red-600) */
+              .content { padding: 40px 30px; color: #334155; line-height: 1.6; font-size: 16px; }
+              .footer { background-color: #0f172a; color: #94a3b8; padding: 40px 30px; text-align: center; font-size: 14px; }
+              .footer-title { color: #ffffff; font-weight: bold; text-transform: uppercase; margin-bottom: 10px; display: block; }
+              .footer-link { color: #ffffff; text-decoration: none; font-weight: 600; }
+              .footer-red { color: #dc2626; text-decoration: none; }
+              .copyright { margin-top: 30px; border-top: 1px solid #1e293b; padding-top: 20px; font-size: 12px; color: #64748b; }
+            </style>
           </head>
-          <body style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; -webkit-font-smoothing: antialiased;">
-            
-            <div style="max-width: 600px; margin: 30px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+          <body>
+            <div class="container">
               
-              <div style="background-color: #002D59; padding: 30px; text-align: center; border-bottom: 4px solid #E30613;">
-                 <img src="${logoUrl}" alt="Autoglas Pro" width="200" style="display: block; margin: 0 auto; max-width: 100%; height: auto;">
-                 <div style="font-size: 0; color: transparent; line-height: 0;">Autoglas Pro</div>
+              <div class="header">
+                 <img src="${logoUrl}" alt="Autoglas Pro" width="220" style="display: block; margin: 0 auto; max-width: 100%; height: auto;">
               </div>
+              <div class="accent-bar"></div>
 
-              <div style="padding: 40px 30px; color: #333333; line-height: 1.8; font-size: 16px;">
+              <div class="content">
                 <div style="white-space: pre-wrap;">${bericht}</div>
               </div>
 
-              <div style="background-color: #f8f9fa; padding: 20px 30px; border-top: 1px solid #eeeeee; text-align: center;">
-                 <p style="margin: 0; color: #666; font-size: 14px; font-style: italic;">Heeft u vragen? Reageer direct op deze e-mail.</p>
-              </div>
+              <div class="footer">
+                
+                <div style="margin-bottom: 25px;">
+                   <span class="footer-title">Contactgegevens</span>
+                   Oostwijk 1C<br>
+                   5406 XT Uden
+                </div>
 
-              <div style="background-color: #1a1a1a; color: #888888; padding: 30px; font-size: 13px; line-height: 1.6; text-align: center;">
-                <strong style="color: #ffffff; font-size: 15px; text-transform: uppercase; letter-spacing: 1px;">Autoglas Pro</strong><br><br>
-                
-                <span style="color: #cccccc;">Specialist in ruitreparatie en vervanging</span><br><br>
-                
-                <a href="tel:0612345678" style="color: #ffffff; text-decoration: none; font-weight: bold;">06-12345678</a><br>
-                <a href="mailto:info@autoglaspro.nl" style="color: #E30613; text-decoration: none;">info@autoglaspro.nl</a><br>
-                <a href="https://autoglaspro.nl" style="color: #E30613; text-decoration: none;">www.autoglaspro.nl</a>
-                
-                <div style="margin-top: 20px; border-top: 1px solid #333; padding-top: 20px; font-size: 11px; color: #555;">
-                  &copy; ${new Date().getFullYear()} Autoglas Pro. Alle rechten voorbehouden.
+                <div style="margin-bottom: 25px;">
+                   <a href="tel:0413331619" class="footer-link">📞 0413 331 619</a><br><br>
+                   <a href="mailto:info@autoglaspro.nl" class="footer-link">✉️ info@autoglaspro.nl</a>
+                </div>
+
+                <div style="margin-bottom: 25px;">
+                   <a href="https://autoglaspro.nl" class="footer-red">www.autoglaspro.nl</a>
+                </div>
+
+                <div class="copyright">
+                  &copy; ${new Date().getFullYear()} Autoglas Pro Uden. Alle rechten voorbehouden.
                 </div>
               </div>
+
             </div>
           </body>
           </html>
@@ -88,7 +105,7 @@ export default {
       } 
       // --- SCENARIO B: SYSTEEM BERICHT (WERKBON / SCHADEMELDING) ---
       else {
-        // (Dit gedeelte blijft hetzelfde als voorheen, voor jouw eigen administratie)
+        // (Oude logica voor interne mails)
         const kenteken = formData.get("Kenteken") || "Onbekend";
         const naam = formData.get("Naam");
         const sterren = formData.get("Aantal_Sterren");
@@ -106,7 +123,6 @@ export default {
           }
         }
 
-        // Simpel design voor intern gebruik
         emailHtml = `
           <!DOCTYPE html>
           <html>
