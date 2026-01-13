@@ -133,7 +133,7 @@ export default {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: "Werkbon mail", 
+          from: "Autoglas Pro Werkbon <onboarding@resend.dev>",
           to: ["timosteen22@gmail.com"], 
           subject: `Werkbon: ${kenteken} - ${typeWerk}`,
           html: htmlContent,
