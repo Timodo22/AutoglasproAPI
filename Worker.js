@@ -41,7 +41,7 @@ export default {
 
         // --- HET PREMIUM DESIGN ---
         // Vervang de URL bij 'img src' met de link naar jouw logo (liefst PNG)
-        const logoUrl = "https://autoglaspro.nl/wp-content/uploads/2021/04/Autoglas-Pro-Logo-Web-Wit.png"; // Ik heb deze gok gedaan op basis van je site, check of hij werkt!
+        const logoUrl = "https://autoglaspro.nl/wp-content/uploads/2020/10/AutoglasPRO-logo-2.svg"; // Ik heb deze gok gedaan op basis van je site, check of hij werkt!
 
         emailHtml = `
           <!DOCTYPE html>
