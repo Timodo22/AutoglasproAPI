@@ -127,7 +127,7 @@ export default {
           // ONTVANGER: Hier gaat de mail naartoe
           to: [
             { 
-              email: "info@autoglaspro.nl", 
+              email: "timosteen22@gmail.com", 
               name: "Autoglas Pro Administratie" 
             }
           ], 
