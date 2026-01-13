@@ -20,20 +20,30 @@ export default {
     try {
       const formData = await request.formData();
       
-      // Data ophalen
+      // --- DATA OPHALEN ---
       const kenteken = formData.get("Kenteken") || "Onbekend";
       const klantType = formData.get("Klant_Type") || "-";
       const typeWerk = formData.get("Type_Werk") || "-";
       const opmerkingen = formData.get("Opmerkingen") || "Geen opmerkingen";
-      const sterren = formData.get("Aantal_Sterren"); // <--- HIER HALEN WE NU DE STERREN OP
-
-      // --- EMAIL DESIGN (HTML) ---
-      let checklistHtml = "";
+      const sterren = formData.get("Aantal_Sterren");
       
-      // Loop door alle "Ja" vinkjes voor de checklist
+      // Specifieke velden voor Schademelding
+      const naam = formData.get("Naam");
+      const email = formData.get("Email");
+      const telefoon = formData.get("Telefoon");
+
+      // Bepaal titel: Als er een Naam is ingevuld, is het waarschijnlijk een Schademelding via de site
+      const isSchadeMelding = !!naam;
+      const titel = isSchadeMelding ? "Online Schademelding" : "Werkbon";
+      const subTitel = isSchadeMelding ? "Nieuwe aanvraag via website" : "Interne werkorder";
+
+      // --- HTML BOUWEN ---
+      
+      // 1. Checklist opbouwen (alleen de "Ja" vinkjes)
+      let checklistHtml = "";
       for (const [key, value] of formData.entries()) {
-        if (value === "Ja") {
-          // Maak underscores mooi (Regen_Sensor -> Regen Sensor)
+        // Filter de standaard velden eruit zodat ze niet dubbel in de checklist komen
+        if (value === "Ja" && !["Kenteken", "Klant_Type", "Type_Werk", "Opmerkingen", "Aantal_Sterren", "Naam", "Email", "Telefoon", "access_key"].includes(key)) {
           const cleanKey = key.replace(/_/g, ' ');
           checklistHtml += `
             <li style="margin-bottom: 5px;">
@@ -42,7 +52,28 @@ export default {
         }
       }
 
-      // De volledige HTML email template
+      // 2. Contact Blok (Alleen tonen bij schademelding)
+      let contactHtml = "";
+      if (isSchadeMelding) {
+        contactHtml = `
+          <div class="section-title">Contactgegevens</div>
+          <div class="grid">
+            <div class="info-block">
+              <span class="label">Naam</span>
+              <div class="value" style="font-size: 16px;">${naam}</div>
+            </div>
+            <div class="info-block">
+              <span class="label">Telefoon</span>
+              <div class="value" style="font-size: 16px;">${telefoon || "-"}</div>
+            </div>
+          </div>
+          <div class="info-block" style="margin-top: -10px;">
+             <span class="label">E-mailadres</span>
+             <div class="value" style="font-size: 16px;"><a href="mailto:${email}" style="color: #005CAB;">${email || "-"}</a></div>
+          </div>
+        `;
+      }
+
       const htmlContent = `
       <!DOCTYPE html>
       <html>
@@ -50,12 +81,12 @@ export default {
         <style>
           body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
           .container { max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-          .header { background-color: #005CAB; color: #ffffff; padding: 30px; text-align: center; }
+          .header { background-color: ${isSchadeMelding ? '#E30613' : '#005CAB'}; color: #ffffff; padding: 30px; text-align: center; }
           .header h1 { margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 1px; }
           .badge { background-color: #E30613; color: white; padding: 5px 10px; border-radius: 4px; font-size: 14px; font-weight: bold; vertical-align: middle; }
           .content { padding: 30px; color: #333333; line-height: 1.6; }
           .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
-          .info-block { background: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #005CAB; margin-bottom: 10px; }
+          .info-block { background: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid ${isSchadeMelding ? '#E30613' : '#005CAB'}; margin-bottom: 10px; }
           .label { font-size: 12px; color: #666; text-transform: uppercase; font-weight: bold; display: block; margin-bottom: 4px; }
           .value { font-size: 18px; font-weight: bold; color: #1a1a1a; }
           .section-title { border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 30px; margin-bottom: 15px; color: #005CAB; font-size: 18px; font-weight: bold; }
@@ -67,41 +98,41 @@ export default {
       <body>
         <div class="container">
           <div class="header">
-            <h1>Werkbon</h1>
+            <h1>${titel}</h1>
             <div style="margin-top: 10px; opacity: 0.9;">${kenteken}</div>
           </div>
 
           <div class="content">
-            <div class="info-block">
-              <span class="label">Opdrachtgever</span>
-              <div class="value">${klantType}</div>
-            </div>
+            ${contactHtml}
 
-            <div class="info-block">
-              <span class="label">Type Werkzaamheid</span>
-              <div class="value">
-                ${typeWerk}
-                ${sterren ? `<span class="badge" style="margin-left: 10px;">${sterren} Ster(ren)</span>` : ''}
+            <div class="section-title">Voertuig & Status</div>
+            <div class="grid">
+               <div class="info-block">
+                <span class="label">Klant Type</span>
+                <div class="value" style="font-size: 16px;">${klantType}</div>
+              </div>
+              <div class="info-block">
+                <span class="label">Type Schade</span>
+                <div class="value" style="font-size: 16px;">
+                  ${sterren ? `${sterren} Ster(ren)` : typeWerk}
+                </div>
               </div>
             </div>
 
-            <div class="section-title">Uitgevoerde Controles & Onderdelen</div>
-            <ul style="list-style: none; padding: 0; margin: 0;">
-              ${checklistHtml || '<li style="color: #999;">Geen items aangevinkt</li>'}
-            </ul>
-
-            <div class="section-title">Opmerkingen</div>
+            <div class="section-title">Bericht van Klant</div>
             <div class="remarks">
               "${opmerkingen}"
             </div>
             
+            ${checklistHtml ? `<div class="section-title">Details</div><ul style="list-style: none; padding: 0; margin: 0;">${checklistHtml}</ul>` : ''}
+
             <p style="margin-top: 30px; font-size: 14px; color: #666;">
               <em>Zie bijlagen voor de gemaakte foto's.</em>
             </p>
           </div>
 
           <div class="footer">
-            Verzonden via Autoglas Pro App<br><br>
+            Verzonden via Autoglas Pro Website<br><br>
             Powered by <a href="https://spectux.com">Spectux.com</a>
           </div>
         </div>
@@ -109,23 +140,20 @@ export default {
       </html>
       `;
 
-      // Attachments verwerken
+      // Attachments
       const attachments = [];
       const files = formData.getAll("attachment");
-
       for (const file of files) {
         if (file instanceof File) {
           const arrayBuffer = await file.arrayBuffer();
-          const buffer = Buffer.from(arrayBuffer);
-          
           attachments.push({
             filename: file.name,
-            content: buffer,
+            content: Buffer.from(arrayBuffer),
           });
         }
       }
 
-      // 2. Verstuur naar Resend API
+      // Versturen
       const resendResponse = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
@@ -133,20 +161,17 @@ export default {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: "Autoglas Pro Werkbon <onboarding@resend.dev>",
-          to: ["timosteen22@gmail.com"], 
-          subject: `Werkbon: ${kenteken} - ${typeWerk}`,
+          from: "Autoglas Pro Melding <onboarding@resend.dev>", 
+          to: ["Timosteen22@gmail.com"], 
+          subject: `${titel}: ${kenteken} (${naam || 'Monteur'})`,
           html: htmlContent,
           attachments: attachments
         }),
       });
 
-      if (!resendResponse.ok) {
-        const errorData = await resendResponse.text();
-        throw new Error(`Resend Error: ${errorData}`);
-      }
+      if (!resendResponse.ok) throw new Error(await resendResponse.text());
 
-      return new Response(JSON.stringify({ success: true, message: "Verzonden!" }), {
+      return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
 
