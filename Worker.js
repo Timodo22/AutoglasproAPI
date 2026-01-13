@@ -70,7 +70,7 @@ export default {
         },
         body: JSON.stringify({
           from: "Werkbon App <onboarding@resend.dev>", 
-          to: ["info@autoglaspro.nl"], 
+          to: ["timosteen22@gmail.com"], 
           subject: `Werkbon: ${kenteken} (${typeWerk})`,
           html: htmlContent,
           attachments: attachments
