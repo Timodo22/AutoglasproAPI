@@ -2,7 +2,7 @@ import { Buffer } from 'node:buffer';
 
 export default {
   async fetch(request, env) {
-    // 1. CORS Headers
+    // 1. CORS Headers (Zodat je website mag praten met deze API)
     const corsHeaders = {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -20,162 +20,136 @@ export default {
     try {
       const formData = await request.formData();
       
-      // --- DATA OPHALEN ---
+      // --- DATA UIT FORMULIER HALEN ---
       const kenteken = formData.get("Kenteken") || "Onbekend";
       const klantType = formData.get("Klant_Type") || "-";
       const typeWerk = formData.get("Type_Werk") || "-";
       const opmerkingen = formData.get("Opmerkingen") || "Geen opmerkingen";
       const sterren = formData.get("Aantal_Sterren");
       
-      // Specifieke velden voor Schademelding
+      // Contactgegevens (worden meestal alleen via de website meegestuurd)
       const naam = formData.get("Naam");
       const email = formData.get("Email");
       const telefoon = formData.get("Telefoon");
 
-      // Bepaal titel: Als er een Naam is ingevuld, is het waarschijnlijk een Schademelding via de site
+      // Check: Is dit een schademelding van de website of een werkbon van een monteur?
+      // Als er een 'Naam' is ingevuld, gaan we er vanuit dat het een klant is (website).
       const isSchadeMelding = !!naam;
       const titel = isSchadeMelding ? "Online Schademelding" : "Werkbon";
-      const subTitel = isSchadeMelding ? "Nieuwe aanvraag via website" : "Interne werkorder";
 
-      // --- HTML BOUWEN ---
+      // --- EMAIL HTML BOUWEN ---
       
-      // 1. Checklist opbouwen (alleen de "Ja" vinkjes)
+      // 1. Checklist items (alleen de "Ja" vinkjes tonen)
       let checklistHtml = "";
       for (const [key, value] of formData.entries()) {
-        // Filter de standaard velden eruit zodat ze niet dubbel in de checklist komen
-        if (value === "Ja" && !["Kenteken", "Klant_Type", "Type_Werk", "Opmerkingen", "Aantal_Sterren", "Naam", "Email", "Telefoon", "access_key"].includes(key)) {
+        // We filteren de standaard velden eruit, zodat alleen de checklist items overblijven
+        if (value === "Ja" && !["Kenteken", "Klant_Type", "Type_Werk", "Opmerkingen", "Aantal_Sterren", "Naam", "Email", "Telefoon"].includes(key)) {
           const cleanKey = key.replace(/_/g, ' ');
-          checklistHtml += `
-            <li style="margin-bottom: 5px;">
-              <span style="color: #27ae60; font-weight: bold;">✓</span> ${cleanKey}
-            </li>`;
+          checklistHtml += `<li style="margin-bottom: 5px;"><span style="color: #27ae60; font-weight: bold;">✓</span> ${cleanKey}</li>`;
         }
       }
 
-      // 2. Contact Blok (Alleen tonen bij schademelding)
+      // 2. Contactblok (Alleen tonen bij schademelding)
       let contactHtml = "";
       if (isSchadeMelding) {
         contactHtml = `
-          <div class="section-title">Contactgegevens</div>
-          <div class="grid">
-            <div class="info-block">
-              <span class="label">Naam</span>
-              <div class="value" style="font-size: 16px;">${naam}</div>
-            </div>
-            <div class="info-block">
-              <span class="label">Telefoon</span>
-              <div class="value" style="font-size: 16px;">${telefoon || "-"}</div>
-            </div>
-          </div>
-          <div class="info-block" style="margin-top: -10px;">
-             <span class="label">E-mailadres</span>
-             <div class="value" style="font-size: 16px;"><a href="mailto:${email}" style="color: #005CAB;">${email || "-"}</a></div>
+          <div style="border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 30px; margin-bottom: 15px; color: #005CAB; font-size: 18px; font-weight: bold;">Contactgegevens</div>
+          <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #E30613; margin-bottom: 10px;">
+              <strong>Naam:</strong> ${naam}<br>
+              <strong>Email:</strong> <a href="mailto:${email}" style="color: #005CAB;">${email}</a><br>
+              <strong>Telefoon:</strong> ${telefoon}
           </div>
         `;
       }
 
+      // 3. De complete email template
       const htmlContent = `
       <!DOCTYPE html>
       <html>
-      <head>
-        <style>
-          body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
-          .container { max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-          .header { background-color: ${isSchadeMelding ? '#E30613' : '#005CAB'}; color: #ffffff; padding: 30px; text-align: center; }
-          .header h1 { margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 1px; }
-          .badge { background-color: #E30613; color: white; padding: 5px 10px; border-radius: 4px; font-size: 14px; font-weight: bold; vertical-align: middle; }
-          .content { padding: 30px; color: #333333; line-height: 1.6; }
-          .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
-          .info-block { background: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid ${isSchadeMelding ? '#E30613' : '#005CAB'}; margin-bottom: 10px; }
-          .label { font-size: 12px; color: #666; text-transform: uppercase; font-weight: bold; display: block; margin-bottom: 4px; }
-          .value { font-size: 18px; font-weight: bold; color: #1a1a1a; }
-          .section-title { border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 30px; margin-bottom: 15px; color: #005CAB; font-size: 18px; font-weight: bold; }
-          .remarks { background-color: #fff8e1; border: 1px solid #ffe0b2; padding: 15px; border-radius: 6px; color: #795548; font-style: italic; }
-          .footer { background-color: #333333; color: #888888; text-align: center; padding: 20px; font-size: 12px; }
-          .footer a { color: #ffffff; text-decoration: none; font-weight: bold; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>${titel}</h1>
-            <div style="margin-top: 10px; opacity: 0.9;">${kenteken}</div>
+      <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+          <h1 style="color: #005CAB; text-align: center; margin-bottom: 5px;">${titel}</h1>
+          <h2 style="text-align: center; color: #333; margin-top: 0; font-size: 24px;">${kenteken}</h2>
+          <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+          
+          ${contactHtml}
+
+          <div style="margin-bottom: 20px;">
+            <strong>Type Werk:</strong> ${typeWerk} ${sterren ? `(${sterren} Sterren)` : ''}<br>
+            <strong>Klant Type:</strong> ${klantType}
           </div>
 
-          <div class="content">
-            ${contactHtml}
+          ${checklistHtml ? `<h3>Checklist</h3><ul>${checklistHtml}</ul>` : ''}
 
-            <div class="section-title">Voertuig & Status</div>
-            <div class="grid">
-               <div class="info-block">
-                <span class="label">Klant Type</span>
-                <div class="value" style="font-size: 16px;">${klantType}</div>
-              </div>
-              <div class="info-block">
-                <span class="label">Type Schade</span>
-                <div class="value" style="font-size: 16px;">
-                  ${sterren ? `${sterren} Ster(ren)` : typeWerk}
-                </div>
-              </div>
-            </div>
-
-            <div class="section-title">Bericht van Klant</div>
-            <div class="remarks">
-              "${opmerkingen}"
-            </div>
-            
-            ${checklistHtml ? `<div class="section-title">Details</div><ul style="list-style: none; padding: 0; margin: 0;">${checklistHtml}</ul>` : ''}
-
-            <p style="margin-top: 30px; font-size: 14px; color: #666;">
-              <em>Zie bijlagen voor de gemaakte foto's.</em>
-            </p>
-          </div>
-
-          <div class="footer">
-            Verzonden via Autoglas Pro Website<br><br>
-            Powered by <a href="https://spectux.com">Spectux.com</a>
-          </div>
+          <h3>Opmerkingen</h3>
+          <p style="background: #fff8e1; padding: 15px; border-radius: 5px; font-style: italic; color: #555;">"${opmerkingen}"</p>
+          
+          <p style="font-size: 12px; color: #999; text-align: center; margin-top: 30px;">
+            Verzonden via Autoglas Pro Systeem<br>
+            Powered by Spectux.com
+          </p>
         </div>
       </body>
       </html>
       `;
 
-      // Attachments
+      // --- BIJLAGEN VOORBEREIDEN VOOR BREVO ---
       const attachments = [];
       const files = formData.getAll("attachment");
+      
       for (const file of files) {
         if (file instanceof File) {
           const arrayBuffer = await file.arrayBuffer();
+          // Brevo verwacht de inhoud als Base64 string
+          const base64Content = Buffer.from(arrayBuffer).toString('base64');
+          
           attachments.push({
-            filename: file.name,
-            content: Buffer.from(arrayBuffer),
+            name: file.name,
+            content: base64Content
           });
         }
       }
 
-      // Versturen
-      const resendResponse = await fetch("https://api.resend.com/emails", {
+      // --- VERSTUREN VIA BREVO API ---
+      const brevoResponse = await fetch("https://api.brevo.com/v3/smtp/email", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${env.RESEND_API_KEY}`,
+          "api-key": env.BREVO_API_KEY,  // Zorg dat deze in Cloudflare Variables staat!
           "Content-Type": "application/json",
+          "Accept": "application/json"
         },
         body: JSON.stringify({
-          from: "Autoglas Pro Melding <onboarding@resend.dev>", 
-          to: ["timosteen22@gmail.com"], 
-          subject: `${titel}: ${kenteken} (${naam || 'Monteur'})`,
-          html: htmlContent,
-          attachments: attachments
+          // AFZENDER: Dit adres MOET geverifieerd zijn in Brevo ("Senders & IP")
+          sender: { 
+            name: "Autoglas Pro Systeem", 
+            email: "info@spectu.com" 
+          }, 
+          // ONTVANGER: Hier gaat de mail naartoe
+          to: [
+            { 
+              email: "info@autoglaspro.nl", 
+              name: "Autoglas Pro Administratie" 
+            }
+          ], 
+          subject: `${titel}: ${kenteken} ${naam ? '- ' + naam : ''}`,
+          htmlContent: htmlContent,
+          attachment: attachments
         }),
       });
 
-      if (!resendResponse.ok) throw new Error(await resendResponse.text());
+      if (!brevoResponse.ok) {
+        const errorData = await brevoResponse.text();
+        // Gooi een error zodat de frontend weet dat het mis ging
+        throw new Error(`Brevo Error: ${errorData}`);
+      }
 
+      // Succes!
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
 
     } catch (error) {
+      // Fout afhandeling
       return new Response(JSON.stringify({ success: false, message: error.message }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
