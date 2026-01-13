@@ -122,7 +122,7 @@ export default {
           // AFZENDER: Dit adres MOET geverifieerd zijn in Brevo ("Senders & IP")
           sender: { 
             name: "Autoglas Pro Systeem", 
-            email: "info@spectu.com" 
+            email: "info@spectux.com" 
           }, 
           // ONTVANGER: Hier gaat de mail naartoe
           to: [
