@@ -1,9 +1,10 @@
-// Cloudflare Worker Code
+import { Buffer } from 'node:buffer';
+
 export default {
   async fetch(request, env) {
     // 1. CORS Headers (Zodat je frontend mag praten met deze backend)
     const corsHeaders = {
-      "Access-Control-Allow-Origin": "*", // Of zet hier je specifieke domein voor meer veiligheid
+      "Access-Control-Allow-Origin": "*", 
       "Access-Control-Allow-Methods": "POST, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type",
     };
@@ -50,7 +51,7 @@ export default {
       for (const file of files) {
         if (file instanceof File) {
           const arrayBuffer = await file.arrayBuffer();
-          // Converteer naar Buffer (nodig voor email attachment encoding)
+          // Nu werkt dit wel omdat we Buffer hebben geïmporteerd
           const buffer = Buffer.from(arrayBuffer);
           
           attachments.push({
@@ -68,8 +69,8 @@ export default {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: "Werkbon App <onboarding@resend.dev>", // Of je eigen geverifieerde domein
-          to: ["info@autoglaspro.nl"], // <-- JOUW EMAIL ADRES
+          from: "Werkbon App <onboarding@resend.dev>", 
+          to: ["info@autoglaspro.nl"], 
           subject: `Werkbon: ${kenteken} (${typeWerk})`,
           html: htmlContent,
           attachments: attachments
