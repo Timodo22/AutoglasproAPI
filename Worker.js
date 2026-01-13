@@ -42,7 +42,7 @@ export default {
 
         // LOGO URL: Ik gebruik hier de PNG versie die vaak beter werkt in email dan SVG
         // Als deze niet werkt, upload je logo als PNG naar je media bieb en plak de link hier.
-        const logoUrl = "https://autoglaspro.nl/wp-content/uploads/2021/04/Autoglas-Pro-Logo-Web-Wit.png";
+        const logoUrl = "https://autoglaspro.pages.dev/assets/AutoglasPRO-logo-2-fg5cX_i1.png";
 
         // --- HET PREMIUM DESIGN (Gebaseerd op jouw Layout.tsx) ---
         emailHtml = `
