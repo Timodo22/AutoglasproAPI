@@ -162,7 +162,7 @@ export default {
         },
         body: JSON.stringify({
           from: "Autoglas Pro Melding <onboarding@resend.dev>", 
-          to: ["Timosteen22@gmail.com"], 
+          to: ["timosteen22@gmail.com"], 
           subject: `${titel}: ${kenteken} (${naam || 'Monteur'})`,
           html: htmlContent,
           attachments: attachments
