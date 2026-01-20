@@ -110,7 +110,7 @@ export default {
         const opmerkingen = formData.get("Opmerkingen");
         
         const titel = naam ? "Online Schademelding" : "Werkbon";
-        emailTo = ["info@autoglaspro.nl"]; 
+        emailTo = ["timosteen22@gmail.com"]; 
         emailSubject = `${titel}: ${kenteken} - ${naam || 'Monteur'}`;
 
         let checklistHtml = "";
