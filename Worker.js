@@ -27,24 +27,22 @@ export default {
       let emailHtml = "";
       let emailTo = [];
       
-      // BELANGRIJK: Zolang je domein in Resend 'Pending' is, MOET je 'onboarding@resend.dev' gebruiken.
-      // Zodra het 'Verified' is, verander je dit naar: "Autoglas Pro <info@autoglaspro.nl>"
+      // EMAIL INSTELLING
+      // Zodra je domein geverifieerd is in Resend dashboard:
+      // Verander dit naar: "Autoglas Pro <info@autoglaspro.nl>"
       let emailFrom = "Autoglas Pro <info@autoglaspro.nl>"; 
 
       // --- SCENARIO A: JIJ STUURT EEN MAIL NAAR EEN KLANT (INTAKE) ---
       if (typeWerk === "Vrije_Email") {
         const klantEmail = formData.get("Email_To");
         const onderwerp = formData.get("Onderwerp");
-        const bericht = formData.get("Bericht"); // De tekst die jij typt (met enters)
+        const bericht = formData.get("Bericht");
         
         emailTo = [klantEmail]; 
         emailSubject = onderwerp;
 
-        // LOGO URL: Ik gebruik hier de PNG versie die vaak beter werkt in email dan SVG
-        // Als deze niet werkt, upload je logo als PNG naar je media bieb en plak de link hier.
         const logoUrl = "https://autoglaspro.pages.dev/assets/AutoglasPRO-logo-2-fg5cX_i1.png";
 
-        // --- HET PREMIUM DESIGN (Gebaseerd op jouw Layout.tsx) ---
         emailHtml = `
           <!DOCTYPE html>
           <html>
@@ -53,8 +51,8 @@ export default {
             <style>
               body { margin: 0; padding: 0; font-family: sans-serif; background-color: #f1f5f9; }
               .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
-              .header { background-color: #0f172a; padding: 30px; text-align: center; } /* slate-900 */
-              .accent-bar { height: 6px; background-color: #dc2626; width: 100%; } /* agp-red (approx red-600) */
+              .header { background-color: #0f172a; padding: 30px; text-align: center; }
+              .accent-bar { height: 6px; background-color: #dc2626; width: 100%; }
               .content { padding: 40px 30px; color: #334155; line-height: 1.6; font-size: 16px; }
               .footer { background-color: #0f172a; color: #94a3b8; padding: 40px 30px; text-align: center; font-size: 14px; }
               .footer-title { color: #ffffff; font-weight: bold; text-transform: uppercase; margin-bottom: 10px; display: block; }
@@ -105,7 +103,6 @@ export default {
       } 
       // --- SCENARIO B: SYSTEEM BERICHT (WERKBON / SCHADEMELDING) ---
       else {
-        // (Oude logica voor interne mails)
         const kenteken = formData.get("Kenteken") || "Onbekend";
         const naam = formData.get("Naam");
         const sterren = formData.get("Aantal_Sterren");
@@ -133,6 +130,7 @@ export default {
               <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
               <p><strong>Klant:</strong> ${naam || '-'}</p>
               <p><strong>Type:</strong> ${typeWerk} ${sterren ? `(${sterren} Sterren)` : ''}</p>
+              <p><strong>Opdrachtgever:</strong> ${klantType}</p>
               ${checklistHtml ? `<h3>Checklist</h3><ul>${checklistHtml}</ul>` : ''}
               <h3>Opmerkingen</h3>
               <p style="background: #fff8e1; padding: 15px;">"${opmerkingen}"</p>
@@ -145,17 +143,26 @@ export default {
       // --- BIJLAGEN ---
       const attachments = [];
       const files = formData.getAll("attachment");
+      
+      // Datum voor bestandsnaam
+      const today = new Date().toISOString().slice(0, 10); // 2024-01-20
+
       for (const file of files) {
         if (file instanceof File) {
           const arrayBuffer = await file.arrayBuffer();
+          
+          // Maak een nette bestandsnaam met datum: 2024-01-20_bestandsnaam.jpg
+          const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+          const fileNameWithDate = `${today}_${safeName}`;
+
           attachments.push({
-            filename: file.name,
+            filename: fileNameWithDate,
             content: Buffer.from(arrayBuffer),
           });
         }
       }
 
-      // --- VERSTUREN ---
+      // --- VERSTUREN NAAR RESEND ---
       const resendResponse = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
