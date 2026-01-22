@@ -108,6 +108,8 @@ export default {
         const sterren = formData.get("Aantal_Sterren");
         const klantType = formData.get("Klant_Type");
         const opmerkingen = formData.get("Opmerkingen");
+        // HIER HALEN WE DE DATUM OP:
+        const datumWerk = formData.get("Datum") || new Date().toLocaleDateString('nl-NL');
         
         const titel = naam ? "Online Schademelding" : "Werkbon";
         emailTo = ["info@autoglaspro.nl"]; 
@@ -115,7 +117,8 @@ export default {
 
         let checklistHtml = "";
         for (const [key, value] of formData.entries()) {
-          if (value === "Ja" && !["Kenteken", "Klant_Type", "Type_Werk", "Opmerkingen", "Aantal_Sterren", "Naam", "Email", "Telefoon", "Email_To", "Onderwerp", "Bericht"].includes(key)) {
+          // Zorg dat 'Datum' niet in de checklist komt (want we tonen hem al apart)
+          if (value === "Ja" && !["Kenteken", "Klant_Type", "Type_Werk", "Datum", "Opmerkingen", "Aantal_Sterren", "Naam", "Email", "Telefoon", "Email_To", "Onderwerp", "Bericht"].includes(key)) {
             checklistHtml += `<li style="margin-bottom: 5px;"><span style="color: #27ae60; font-weight: bold;">✓</span> ${key.replace(/_/g, ' ')}</li>`;
           }
         }
@@ -128,10 +131,14 @@ export default {
               <h1 style="color: #005CAB; text-align: center;">${titel}</h1>
               <h2 style="text-align: center; color: #333;">${kenteken}</h2>
               <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+              
+              <p><strong>Datum:</strong> ${datumWerk}</p>
               <p><strong>Klant:</strong> ${naam || '-'}</p>
               <p><strong>Type:</strong> ${typeWerk} ${sterren ? `(${sterren} Sterren)` : ''}</p>
               <p><strong>Opdrachtgever:</strong> ${klantType}</p>
+              
               ${checklistHtml ? `<h3>Checklist</h3><ul>${checklistHtml}</ul>` : ''}
+              
               <h3>Opmerkingen</h3>
               <p style="background: #fff8e1; padding: 15px;">"${opmerkingen}"</p>
             </div>
@@ -144,8 +151,8 @@ export default {
       const attachments = [];
       const files = formData.getAll("attachment");
       
-      // Datum voor bestandsnaam
-      const today = new Date().toISOString().slice(0, 10); // 2024-01-20
+      // Datum voor bestandsnaam (dit houden we technisch op 'vandaag' voor sortering)
+      const today = new Date().toISOString().slice(0, 10); 
 
       for (const file of files) {
         if (file instanceof File) {
