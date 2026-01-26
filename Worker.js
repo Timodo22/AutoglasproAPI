@@ -2,13 +2,14 @@ import { Buffer } from 'node:buffer';
 
 export default {
   async fetch(request, env) {
-    // 1. CORS Headers
+    // 1. CORS Headers (Zorgt dat je website verbinding mag maken)
     const corsHeaders = {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "POST, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type",
     };
 
+    // Preflight request afhandelen
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: corsHeaders });
     }
@@ -19,26 +20,117 @@ export default {
 
     try {
       const formData = await request.formData();
+      const typeWerk = formData.get("Type_Werk");
       
-      // Kijk wat voor soort bericht dit is
-      const typeWerk = formData.get("Type_Werk"); 
+      // --- BASIS INSTELLINGEN ---
       
+      // STANDAARD ONTVANGER: info@autoglaspro.nl
+      // Dit betekent dat alle formulieren hierheen gaan, tenzij we dit later in de code overschrijven.
+      let emailTo = ["info@autoglaspro.nl"]; 
+      
+      let emailFrom = "Autoglas Pro <info@autoglaspro.nl>";
       let emailSubject = "";
       let emailHtml = "";
-      let emailTo = [];
-      
-      // EMAIL INSTELLING
-      // Zodra je domein geverifieerd is in Resend dashboard:
-      // Verander dit naar: "Autoglas Pro <info@autoglaspro.nl>"
-      let emailFrom = "Autoglas Pro <info@autoglaspro.nl>"; 
 
-      // --- SCENARIO A: JIJ STUURT EEN MAIL NAAR EEN KLANT (INTAKE) ---
-      if (typeWerk === "Vrije_Email") {
+      // ---------------------------------------------------------
+      // SCENARIO 1: NIEUWE INTAKE / OPDRACHT (Formulier op je site)
+      // ---------------------------------------------------------
+      if (typeWerk === "Intake_Nieuw") {
+        // We hoeven emailTo niet aan te passen, die staat al goed (info@autoglaspro.nl).
+
+        // Data ophalen uit formulier
+        const kenteken = formData.get("Kenteken") || "-";
+        const chassis = formData.get("Chassis") || "-";
+        const naam = formData.get("Naam") || "Onbekend";
+        const emailKlant = formData.get("Email_Klant") || "-";
+        const telefoon = formData.get("Telefoon") || "-";
+        const postcode = formData.get("Postcode") || "";
+        const huisnummer = formData.get("Huisnummer") || "";
+        
+        const opdrachtType = formData.get("Opdracht_Type") || "Onbekend";
+        const sterren = formData.get("Aantal_Sterren") || "";
+        const schadeDatum = formData.get("Schadedatum") || "-";
+        
+        const facturatieType = formData.get("Facturatie_Type") || "Niet geselecteerd";
+        const leaseMaatschappij = formData.get("Leasemaatschappij") || "-";
+        const verzekeraar = formData.get("Verzekeraar_Naam") || "-";
+        const polisnummer = formData.get("Polisnummer") || "-";
+        const garageNaam = formData.get("Garage_Naam") || "-";
+        
+        const opmerkingen = formData.get("Opmerkingen") || "Geen opmerkingen";
+
+        // Onderwerp bepalen (Kenteken heeft voorrang, anders Chassis)
+        const voertuigInfo = kenteken !== "-" && kenteken !== "" ? kenteken : chassis;
+        emailSubject = `NIEUWE OPDRACHT: ${opdrachtType} - ${voertuigInfo}`;
+
+        // HTML Tabel opbouwen voor in de mail
+        emailHtml = `
+          <!DOCTYPE html>
+          <html>
+          <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
+            <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+              
+              <div style="background-color: #005CAB; padding: 20px; text-align: center; color: white;">
+                <h1 style="margin:0; font-size: 24px;">Nieuwe Opdracht</h1>
+                <p style="margin: 5px 0 0 0; opacity: 0.8;">${new Date().toLocaleDateString('nl-NL')}</p>
+              </div>
+              <div style="background-color: #E30613; height: 5px; width: 100%;"></div>
+
+              <div style="padding: 20px;">
+                
+                <h3 style="color: #005CAB; border-bottom: 2px solid #eee; padding-bottom: 5px;">🚗 Voertuig</h3>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                  <tr><td style="padding: 8px; color: #666; width: 40%;">Kenteken:</td><td style="padding: 8px; font-weight: bold;">${kenteken}</td></tr>
+                  <tr><td style="padding: 8px; color: #666;">Chassis (VIN):</td><td style="padding: 8px; font-weight: bold;">${chassis}</td></tr>
+                </table>
+
+                <h3 style="color: #005CAB; border-bottom: 2px solid #eee; padding-bottom: 5px;">👤 Klantgegevens</h3>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                  <tr><td style="padding: 8px; color: #666; width: 40%;">Naam:</td><td style="padding: 8px; font-weight: bold;">${naam}</td></tr>
+                  <tr><td style="padding: 8px; color: #666;">Adres:</td><td style="padding: 8px;">${postcode} ${huisnummer}</td></tr>
+                  <tr><td style="padding: 8px; color: #666;">Email:</td><td style="padding: 8px;"><a href="mailto:${emailKlant}">${emailKlant}</a></td></tr>
+                  <tr><td style="padding: 8px; color: #666;">Telefoon:</td><td style="padding: 8px;"><a href="tel:${telefoon}">${telefoon}</a></td></tr>
+                </table>
+
+                <h3 style="color: #005CAB; border-bottom: 2px solid #eee; padding-bottom: 5px;">🔧 Opdracht Details</h3>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                  <tr><td style="padding: 8px; color: #666; width: 40%;">Type:</td><td style="padding: 8px; font-weight: bold;">${opdrachtType}</td></tr>
+                  ${sterren ? `<tr><td style="padding: 8px; color: #666;">Aantal Sterren:</td><td style="padding: 8px;">${sterren}</td></tr>` : ''}
+                  <tr><td style="padding: 8px; color: #666;">Schadedatum:</td><td style="padding: 8px;">${schadeDatum}</td></tr>
+                </table>
+
+                <h3 style="color: #005CAB; border-bottom: 2px solid #eee; padding-bottom: 5px;">💶 Facturatie: ${facturatieType}</h3>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                  ${leaseMaatschappij !== '-' ? `<tr><td style="padding: 8px; color: #666; width: 40%;">Leasemaatschappij:</td><td style="padding: 8px;">${leaseMaatschappij}</td></tr>` : ''}
+                  ${verzekeraar !== '-' ? `<tr><td style="padding: 8px; color: #666; width: 40%;">Verzekeraar:</td><td style="padding: 8px;">${verzekeraar}</td></tr>` : ''}
+                  ${polisnummer !== '-' ? `<tr><td style="padding: 8px; color: #666;">Polisnummer:</td><td style="padding: 8px;">${polisnummer}</td></tr>` : ''}
+                  ${garageNaam !== '-' ? `<tr><td style="padding: 8px; color: #666;">Garage:</td><td style="padding: 8px;">${garageNaam}</td></tr>` : ''}
+                </table>
+
+                <h3 style="color: #005CAB; border-bottom: 2px solid #eee; padding-bottom: 5px;">📝 Opmerkingen</h3>
+                <p style="background: #fff8e1; padding: 15px; border-radius: 5px; color: #555;">${opmerkingen}</p>
+
+              </div>
+              <div style="background-color: #eee; padding: 15px; text-align: center; font-size: 12px; color: #888;">
+                Verzonden via Autoglas Pro Intake Systeem
+              </div>
+            </div>
+          </body>
+          </html>
+        `;
+      } 
+      
+      // ---------------------------------------------------------
+      // SCENARIO 2: VRIJE EMAIL NAAR KLANT
+      // ---------------------------------------------------------
+      else if (typeWerk === "Vrije_Email") {
+        // HIER overschrijven we het adres, want deze moet naar de klant.
         const klantEmail = formData.get("Email_To");
+        emailTo = [klantEmail]; 
+        
         const onderwerp = formData.get("Onderwerp");
         const bericht = formData.get("Bericht");
         
-        emailTo = [klantEmail]; 
         emailSubject = onderwerp;
 
         const logoUrl = "https://autoglaspro.pages.dev/assets/AutoglasPRO-logo-2-fg5cX_i1.png";
@@ -55,121 +147,54 @@ export default {
               .accent-bar { height: 6px; background-color: #dc2626; width: 100%; }
               .content { padding: 40px 30px; color: #334155; line-height: 1.6; font-size: 16px; }
               .footer { background-color: #0f172a; color: #94a3b8; padding: 40px 30px; text-align: center; font-size: 14px; }
-              .footer-title { color: #ffffff; font-weight: bold; text-transform: uppercase; margin-bottom: 10px; display: block; }
               .footer-link { color: #ffffff; text-decoration: none; font-weight: 600; }
-              .footer-red { color: #dc2626; text-decoration: none; }
-              .copyright { margin-top: 30px; border-top: 1px solid #1e293b; padding-top: 20px; font-size: 12px; color: #64748b; }
             </style>
           </head>
           <body>
             <div class="container">
-              
               <div class="header">
-                 <img src="${logoUrl}" alt="Autoglas Pro" width="220" style="display: block; margin: 0 auto; max-width: 100%; height: auto;">
+                 <img src="${logoUrl}" alt="Autoglas Pro" width="220" style="display: block; margin: 0 auto;">
               </div>
               <div class="accent-bar"></div>
-
               <div class="content">
                 <div style="white-space: pre-wrap;">${bericht}</div>
               </div>
-
               <div class="footer">
-                
-                <div style="margin-bottom: 25px;">
-                   <span class="footer-title">Contactgegevens</span>
-                   Oostwijk 1C<br>
-                   5406 XT Uden
-                </div>
-
-                <div style="margin-bottom: 25px;">
-                   <a href="tel:0413331619" class="footer-link">📞 0413 331 619</a><br><br>
-                   <a href="mailto:info@autoglaspro.nl" class="footer-link">✉️ info@autoglaspro.nl</a>
-                </div>
-
-                <div style="margin-bottom: 25px;">
-                   <a href="https://autoglaspro.nl" class="footer-red">www.autoglaspro.nl</a>
-                </div>
-
-                <div class="copyright">
-                  &copy; ${new Date().getFullYear()} Autoglas Pro Uden. Alle rechten voorbehouden.
-                </div>
+                <p><strong>Autoglas Pro</strong><br>Oostwijk 1C, 5406 XT Uden</p>
+                <a href="https://autoglaspro.nl" class="footer-link">www.autoglaspro.nl</a>
               </div>
-
             </div>
           </body>
           </html>
         `;
-
       } 
-      // --- SCENARIO B: SYSTEEM BERICHT (WERKBON / SCHADEMELDING) ---
       else {
-        const kenteken = formData.get("Kenteken") || "Onbekend";
-        const naam = formData.get("Naam");
-        const sterren = formData.get("Aantal_Sterren");
-        const klantType = formData.get("Klant_Type");
-        const opmerkingen = formData.get("Opmerkingen");
-        // HIER HALEN WE DE DATUM OP:
-        const datumWerk = formData.get("Datum") || new Date().toLocaleDateString('nl-NL');
-        
-        const titel = naam ? "Online Schademelding" : "Werkbon";
-        emailTo = ["info@autoglaspro.nl"]; 
-        emailSubject = `${titel}: ${kenteken} - ${naam || 'Monteur'}`;
-
-        let checklistHtml = "";
-        for (const [key, value] of formData.entries()) {
-          // Zorg dat 'Datum' niet in de checklist komt (want we tonen hem al apart)
-          if (value === "Ja" && !["Kenteken", "Klant_Type", "Type_Werk", "Datum", "Opmerkingen", "Aantal_Sterren", "Naam", "Email", "Telefoon", "Email_To", "Onderwerp", "Bericht"].includes(key)) {
-            checklistHtml += `<li style="margin-bottom: 5px;"><span style="color: #27ae60; font-weight: bold;">✓</span> ${key.replace(/_/g, ' ')}</li>`;
-          }
-        }
-
-        emailHtml = `
-          <!DOCTYPE html>
-          <html>
-          <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
-            <div style="max-width: 600px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 8px;">
-              <h1 style="color: #005CAB; text-align: center;">${titel}</h1>
-              <h2 style="text-align: center; color: #333;">${kenteken}</h2>
-              <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-              
-              <p><strong>Datum:</strong> ${datumWerk}</p>
-              <p><strong>Klant:</strong> ${naam || '-'}</p>
-              <p><strong>Type:</strong> ${typeWerk} ${sterren ? `(${sterren} Sterren)` : ''}</p>
-              <p><strong>Opdrachtgever:</strong> ${klantType}</p>
-              
-              ${checklistHtml ? `<h3>Checklist</h3><ul>${checklistHtml}</ul>` : ''}
-              
-              <h3>Opmerkingen</h3>
-              <p style="background: #fff8e1; padding: 15px;">"${opmerkingen}"</p>
-            </div>
-          </body>
-          </html>
-        `;
+        // Fallback als er geen type is meegegeven (zou niet moeten gebeuren met nieuwe code)
+        return new Response(JSON.stringify({ success: false, message: "Type werk onbekend" }), { headers: corsHeaders });
       }
 
-      // --- BIJLAGEN ---
+      // --- BIJLAGEN VERWERKEN ---
       const attachments = [];
       const files = formData.getAll("attachment");
-      
-      // Datum voor bestandsnaam (dit houden we technisch op 'vandaag' voor sortering)
       const today = new Date().toISOString().slice(0, 10); 
 
       for (const file of files) {
         if (file instanceof File) {
           const arrayBuffer = await file.arrayBuffer();
-          
-          // Maak een nette bestandsnaam met datum: 2024-01-20_bestandsnaam.jpg
+          // Bestandsnaam veilig maken (spaties eruit etc)
           const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-          const fileNameWithDate = `${today}_${safeName}`;
-
+          
           attachments.push({
-            filename: fileNameWithDate,
+            filename: `${today}_${safeName}`,
             content: Buffer.from(arrayBuffer),
           });
         }
       }
 
       // --- VERSTUREN NAAR RESEND ---
+      // Hier wordt de variabele 'emailTo' gebruikt. 
+      // Die is dus "info@autoglaspro.nl" bij Intake, of "klant@email.nl" bij Vrije Email.
+      
       const resendResponse = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
