@@ -2,14 +2,14 @@ import { Buffer } from 'node:buffer';
 
 export default {
   async fetch(request, env) {
-    // 1. CORS Headers - DEZE ZIJN CRUCIAAL
+    // 1. CORS Headers
     const corsHeaders = {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "POST, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type",
     };
 
-    // 2. OPTIONS (Preflight) requests direct afhandelen
+    // 2. OPTIONS (Preflight) requests afhandelen
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: corsHeaders });
     }
@@ -19,7 +19,6 @@ export default {
         return new Response("Method not allowed", { status: 405, headers: corsHeaders });
       }
 
-      // Check of API key aanwezig is in de cloud omgeving
       if (!env.RESEND_API_KEY) {
         throw new Error("Server Error: RESEND_API_KEY ontbreekt in settings");
       }
@@ -32,7 +31,7 @@ export default {
       let emailSubject = "";
       let emailHtml = "";
 
-      // --- LOGICA VOOR DE EMAIL INHOUD ---
+      // --- SCENARIO 1: DE WERKBON (Bestaande logica) ---
       if (typeWerk === "Reparatie" || typeWerk === "Vervanging" || typeWerk === "Ruit Reparatie" || typeWerk === "Ruit Vervanging") {
         const kenteken = formData.get("Kenteken") || "Onbekend";
         const klantType = formData.get("Klant_Type") || "B2B";
@@ -68,19 +67,96 @@ export default {
             </div>
           </body></html>`;
       } 
-      // Voeg hier je andere 'Intake' logica toe indien nodig, of laat het zo als je alleen werkbonnen doet.
+      
+      // --- SCENARIO 2: DE INTAKE (NIEUWE LOGICA TOEGEVOEGD) ---
+      else if (typeWerk === "Intake_Nieuw") {
+        // Data ophalen uit Intake formulier
+        const kenteken = formData.get("Kenteken") || "";
+        const chassis = formData.get("Chassis") || "";
+        const voertuigHeader = kenteken ? kenteken : (chassis ? `VIN: ${chassis}` : "Onbekend Voertuig");
+
+        const naam = formData.get("Naam") || "Onbekend";
+        const emailKlant = formData.get("Email_Klant") || "-";
+        const telefoon = formData.get("Telefoon") || "-";
+        const postcode = formData.get("Postcode") || "";
+        const huisnummer = formData.get("Huisnummer") || "";
+        
+        const opdrachtType = formData.get("Opdracht_Type") || "Onbekend";
+        const aantalSterren = formData.get("Aantal_Sterren") || "";
+        const schadedatum = formData.get("Schadedatum") || "-";
+        
+        const facturatieType = formData.get("Facturatie_Type") || "-";
+        const leasemaatschappij = formData.get("Leasemaatschappij") || "";
+        const verzekeraar = formData.get("Verzekeraar_Naam") || "";
+        const polisnummer = formData.get("Polisnummer") || "";
+        const garage = formData.get("Garage_Naam") || "";
+        
+        const opmerkingen = formData.get("Opmerkingen") || "-";
+
+        emailSubject = `NIEUWE OPDRACHT: ${voertuigHeader} - ${opdrachtType}`;
+
+        // Facturatie details samenstellen op basis van keuze
+        let facturatieDetails = `<p>Type: ${facturatieType}</p>`;
+        if (facturatieType === "Lease") facturatieDetails += `<p>Maatschappij: <strong>${leasemaatschappij}</strong></p>`;
+        if (facturatieType === "Verzekeraar") facturatieDetails += `<p>Verzekeraar: <strong>${verzekeraar}</strong></p><p>Polisnr: ${polisnummer}</p>`;
+        if (facturatieType === "Garage") facturatieDetails += `<p>Garage: <strong>${garage}</strong></p>`;
+
+        emailHtml = `
+          <!DOCTYPE html><html><body style="font-family: Arial, sans-serif; background-color: #f0f4f8; padding: 20px;">
+            <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+              
+              <div style="background-color: #005CAB; padding: 25px; text-align: center; color: white; border-bottom: 4px solid #E30613;">
+                <h1 style="margin:0; font-size: 22px; text-transform: uppercase;">Nieuwe Intake</h1>
+                <p style="margin: 5px 0 0 0; font-size: 18px; font-weight:bold;">${voertuigHeader}</p>
+              </div>
+
+              <div style="padding: 25px;">
+                
+                <h3 style="color: #005CAB; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 0;">👤 Klantgegevens</h3>
+                <table style="width: 100%; font-size: 14px; margin-bottom: 20px;">
+                  <tr><td style="width: 120px; color: #666;">Naam:</td><td><strong>${naam}</strong></td></tr>
+                  <tr><td style="color: #666;">Email:</td><td>${emailKlant}</td></tr>
+                  <tr><td style="color: #666;">Tel:</td><td>${telefoon}</td></tr>
+                  <tr><td style="color: #666;">Adres:</td><td>${postcode} ${huisnummer}</td></tr>
+                </table>
+
+                <h3 style="color: #005CAB; border-bottom: 1px solid #eee; padding-bottom: 5px;">🔧 Opdracht</h3>
+                <table style="width: 100%; font-size: 14px; margin-bottom: 20px;">
+                  <tr><td style="width: 120px; color: #666;">Type:</td><td><strong>${opdrachtType}</strong> ${aantalSterren ? `(${aantalSterren} sterren)` : ''}</td></tr>
+                  ${schadedatum !== '-' ? `<tr><td style="color: #666;">Schadedatum:</td><td>${schadedatum}</td></tr>` : ''}
+                  <tr><td style="color: #666;">Kenteken:</td><td>${kenteken || '-'}</td></tr>
+                  <tr><td style="color: #666;">Chassis (VIN):</td><td>${chassis || '-'}</td></tr>
+                </table>
+
+                <h3 style="color: #005CAB; border-bottom: 1px solid #eee; padding-bottom: 5px;">💳 Facturatie</h3>
+                <div style="font-size: 14px; margin-bottom: 20px; color: #333;">
+                  ${facturatieDetails}
+                </div>
+
+                ${opmerkingen !== '-' ? `
+                <div style="background-color: #fff8e1; padding: 15px; border-left: 4px solid #ffc107; border-radius: 4px;">
+                  <strong>Opmerking:</strong><br>${opmerkingen}
+                </div>` : ''}
+
+              </div>
+              <div style="background-color: #f9fafb; padding: 15px; text-align: center; font-size: 12px; color: #999;">
+                Verzonden via Autoglas Pro App
+              </div>
+            </div>
+          </body></html>`;
+      } 
+      
+      // --- FALLBACK (Voor als er iets totaal anders binnenkomt) ---
       else {
-          // Fallback voor Intake of Vrije Email (simpel gehouden voor nu)
           emailSubject = `Nieuwe inzending: ${typeWerk}`;
-          emailHtml = `<p>Er is een formulier ingevuld van type: ${typeWerk}</p>`;
+          emailHtml = `<p>Er is een formulier ingevuld van type: ${typeWerk}. De details zijn niet specifiek geprogrammeerd.</p>`;
       }
 
-      // --- BIJLAGEN VERWERKEN ---
+      // --- BIJLAGEN VERWERKEN (Werkt voor beide formulieren) ---
       const attachments = [];
       const files = formData.getAll("attachment");
       const today = new Date().toISOString().slice(0, 10); 
 
-      // Beveiliging: Stop als data bizar groot is (> 15MB)
       let totalSize = 0;
       for (const file of files) {
         if (file instanceof File) {
@@ -120,19 +196,17 @@ export default {
         throw new Error("Fout bij versturen email: " + errorText);
       }
 
-      // SUCCES RESPONSE
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
 
     } catch (error) {
       console.error("Worker Error:", error);
-      // ERROR RESPONSE (Altijd JSON + CORS headers!)
       return new Response(JSON.stringify({ 
         success: false, 
         message: error.message || "Onbekende server fout" 
       }), {
-        status: 500, // Of 200 als je wilt dat de frontend het netjes afhandelt zonder try/catch
+        status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
