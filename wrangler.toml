@@ -1,4 +1,4 @@
-name = "autoglaspro-api"
+name = "autoglasproapi"
 main = "Worker.js"
 compatibility_date = "2024-01-13"
 compatibility_flags = ["nodejs_compat"]
