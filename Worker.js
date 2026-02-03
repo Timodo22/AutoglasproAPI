@@ -31,9 +31,10 @@ export default {
       let emailSubject = "";
       let emailHtml = "";
 
-      // --- SCENARIO 1: DE WERKBON (Bestaande logica) ---
+      // --- SCENARIO 1: DE WERKBON ---
       if (typeWerk === "Reparatie" || typeWerk === "Vervanging" || typeWerk === "Ruit Reparatie" || typeWerk === "Ruit Vervanging") {
-        const kenteken = formData.get("Kenteken") || "Onbekend";
+        // Forceer Kenteken naar UPPERCASE
+        const kenteken = (formData.get("Kenteken") || "Onbekend").toUpperCase();
         const klantType = formData.get("Klant_Type") || "B2B";
         const datum = formData.get("Datum") || new Date().toLocaleDateString('nl-NL');
         const sterren = formData.get("Aantal_Sterren") || "";
@@ -68,11 +69,11 @@ export default {
           </body></html>`;
       } 
       
-      // --- SCENARIO 2: DE INTAKE (NIEUWE LOGICA TOEGEVOEGD) ---
+      // --- SCENARIO 2: DE INTAKE ---
       else if (typeWerk === "Intake_Nieuw") {
-        // Data ophalen uit Intake formulier
-        const kenteken = formData.get("Kenteken") || "";
-        const chassis = formData.get("Chassis") || "";
+        // Forceer Kenteken en Chassis naar UPPERCASE
+        const kenteken = (formData.get("Kenteken") || "").toUpperCase();
+        const chassis = (formData.get("Chassis") || "").toUpperCase();
         const voertuigHeader = kenteken ? kenteken : (chassis ? `VIN: ${chassis}` : "Onbekend Voertuig");
 
         const naam = formData.get("Naam") || "Onbekend";
@@ -95,7 +96,7 @@ export default {
 
         emailSubject = `NIEUWE OPDRACHT: ${voertuigHeader} - ${opdrachtType}`;
 
-        // Facturatie details samenstellen op basis van keuze
+        // Facturatie details samenstellen
         let facturatieDetails = `<p>Type: ${facturatieType}</p>`;
         if (facturatieType === "Lease") facturatieDetails += `<p>Maatschappij: <strong>${leasemaatschappij}</strong></p>`;
         if (facturatieType === "Verzekeraar") facturatieDetails += `<p>Verzekeraar: <strong>${verzekeraar}</strong></p><p>Polisnr: ${polisnummer}</p>`;
@@ -146,13 +147,13 @@ export default {
           </body></html>`;
       } 
       
-      // --- FALLBACK (Voor als er iets totaal anders binnenkomt) ---
+      // --- FALLBACK ---
       else {
           emailSubject = `Nieuwe inzending: ${typeWerk}`;
           emailHtml = `<p>Er is een formulier ingevuld van type: ${typeWerk}. De details zijn niet specifiek geprogrammeerd.</p>`;
       }
 
-      // --- BIJLAGEN VERWERKEN (Werkt voor beide formulieren) ---
+      // --- BIJLAGEN VERWERKEN ---
       const attachments = [];
       const files = formData.getAll("attachment");
       const today = new Date().toISOString().slice(0, 10); 
